@@ -1,1 +1,14 @@
-.vscode/*
+# Visual Studio Code
+.vscode/
+
+# Objects
+*.o
+
+# Check binary
+check
+
+# Example binary
+example
+
+# Coverage
+*.gc*
