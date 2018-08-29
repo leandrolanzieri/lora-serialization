@@ -116,8 +116,9 @@ void lora_serialization_write_temperature(lora_serialization_t *serialization,
 void lora_serialization_write_bitmap(lora_serialization_t *serialization,
                                      lora_serialization_bitmap_t bitmap)
 {
+    uint8_t *bitmapPtr = ((uint8_t*)&bitmap);
     assert((serialization->cursor + LORA_SERIALIZATION_BITMAP_SIZE) < 
            LORA_SERIALIZATION_MAX_BUFFER_SIZE);
     
-    serialization->buffer[serialization->cursor] = (uint8_t)bitmap;
+    serialization->buffer[serialization->cursor] = *bitmapPtr;
 }
