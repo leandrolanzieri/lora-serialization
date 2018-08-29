@@ -13,9 +13,11 @@
  * @author      Jose Ignacio Alamos <jose.alamos@haw-hamburg.de>
  */
 
-#include "byteorder.h"
 #include "assert.h"
 #include "lora_serialization.h"
+
+static void _int_to_bytes(uint8_t *buffer, int value,
+                                            uint8_t byteSize);
 
 void lora_serialization_reset(lora_serialization_t *serialization)
 {
@@ -26,15 +28,14 @@ void lora_serialization_reset(lora_serialization_t *serialization)
 int lora_serialization_write_unix_time(lora_serialization_t *serialization,
                                        uint32_t unixtime)
 {
-    le_uint32_t *value = (le_uint32_t *)
-                         (serialization->buffer + serialization->cursor);
+    uint8_t *slot = (uint8_t*)(serialization->buffer + serialization->cursor);
 
     if ((serialization->cursor + LORA_SERIALIZATION_UNIX_TIME_SIZE) >=
         LORA_SERIALIZATION_MAX_BUFFER_SIZE) {
         return -ENOBUFS;
     }
 
-    *value = byteorder_btoll(byteorder_htonl(unixtime));
+    _int_to_bytes(slot, unixtime, LORA_SERIALIZATION_UNIX_TIME_SIZE);
     serialization->cursor += LORA_SERIALIZATION_UNIX_TIME_SIZE;
 
     return 0;
@@ -45,9 +46,9 @@ int lora_serialization_write_coordinates(lora_serialization_t *serialization,
 {
     int32_t lat = latitude * 1e6;
     int32_t lng = longitude * 1e6;
-    le_uint32_t *lat_value = (le_uint32_t *)
+    uint8_t *lat_slot = (uint8_t *)
                              (serialization->buffer + serialization->cursor);
-    le_uint32_t *lng_value = (le_uint32_t *)
+    uint8_t *lng_slot = (uint8_t *)
                              (serialization->buffer + serialization->cursor
                               + LORA_SERIALIZATION_LATITUDE_SIZE);
 
@@ -56,18 +57,17 @@ int lora_serialization_write_coordinates(lora_serialization_t *serialization,
         return -ENOBUFS;
     }
 
-    *lat_value = byteorder_btoll(byteorder_htonl(lat));
-    *lng_value = byteorder_btoll(byteorder_htonl(lng));
-
+    _int_to_bytes(lat_slot, lat, LORA_SERIALIZATION_LATITUDE_SIZE);
+    _int_to_bytes(lng_slot, lng, LORA_SERIALIZATION_LONGITUDE_SIZE);
     serialization->cursor += LORA_SERIALIZATION_GPS_SIZE;
 
     return 0;
 }
 
 int lora_serialization_write_uint16(lora_serialization_t *serialization,
-                                    uint16_t i)
+                                    uint16_t value)
 {
-    le_uint16_t *value = (le_uint16_t *)
+    uint8_t *slot = (uint8_t *)
                          (serialization->buffer + serialization->cursor);
 
     if ((serialization->cursor + LORA_SERIALIZATION_UINT16_SIZE) >=
@@ -75,21 +75,21 @@ int lora_serialization_write_uint16(lora_serialization_t *serialization,
         return -ENOBUFS;
     }
 
-    *value = byteorder_btols(byteorder_htons(i));
+    _int_to_bytes(slot, value, LORA_SERIALIZATION_UINT16_SIZE);
     serialization->cursor += LORA_SERIALIZATION_UINT16_SIZE;
 
     return 0;
 }
 
 int lora_serialization_write_uint8(lora_serialization_t *serialization,
-                                   uint8_t i)
+                                   uint8_t value)
 {
     if ((serialization->cursor + LORA_SERIALIZATION_UINT8_SIZE) >=
         LORA_SERIALIZATION_MAX_BUFFER_SIZE) {
         return -ENOBUFS;
     }
 
-    (serialization->buffer)[serialization->cursor] = i;
+    (serialization->buffer)[serialization->cursor] = value;
     serialization->cursor += LORA_SERIALIZATION_UINT8_SIZE;
 
     return 0;
@@ -99,7 +99,7 @@ int lora_serialization_write_humidity(lora_serialization_t *serialization,
                                       float humidity)
 {
     int16_t h = (int16_t)(humidity * 100);
-    le_uint16_t *value = (le_uint16_t *)
+    uint8_t *slot = (uint8_t *)
                          (serialization->buffer + serialization->cursor);
 
     if ((serialization->cursor + LORA_SERIALIZATION_HUMIDITY_SIZE) >=
@@ -107,18 +107,18 @@ int lora_serialization_write_humidity(lora_serialization_t *serialization,
         return -ENOBUFS;
     }
 
-    *value = byteorder_btols(byteorder_htons(h));
+    _int_to_bytes(slot, h, LORA_SERIALIZATION_HUMIDITY_SIZE);
     serialization->cursor += LORA_SERIALIZATION_HUMIDITY_SIZE;
 
     return 0;
 }
 
-/* The temperature has to be  written in Big Endian */
+/* The temperature has to be written in Big Endian */
 int lora_serialization_write_temperature(lora_serialization_t *serialization,
                                          float temperature)
 {
     int16_t t = (int16_t) (temperature * 100);
-    network_uint16_t *value = (network_uint16_t *)
+    uint8_t *slot = (uint8_t *)
                               (serialization->buffer + serialization->cursor);
 
     if ((serialization->cursor + LORA_SERIALIZATION_TEMPERATURE_SIZE) >=
@@ -131,7 +131,9 @@ int lora_serialization_write_temperature(lora_serialization_t *serialization,
         t++;
     }
 
-    *value = byteorder_htons((uint16_t) t);
+    t = (t << 8) | ((t >> 8) & 0xFF);
+
+    _int_to_bytes(slot, t, LORA_SERIALIZATION_TEMPERATURE_SIZE);
     serialization->cursor += LORA_SERIALIZATION_TEMPERATURE_SIZE;
 
     return 0;
@@ -150,4 +152,12 @@ int lora_serialization_write_bitmap(lora_serialization_t *serialization,
     serialization->buffer[serialization->cursor] = *bitmapPtr;
 
     return 0;
+}
+
+static void _int_to_bytes(uint8_t *buffer, int value,
+                                       uint8_t byteSize)
+{
+    for (uint8_t i = 0; i < byteSize; i++) {
+        buffer[i] = (uint8_t)(value >> (i * 8));
+    }
 }
