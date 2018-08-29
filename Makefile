@@ -3,10 +3,10 @@
 all: example
 
 example:
-	CFLAGS=$(CFLAGS) make -C example
+	CFLAGS=$(CFLAGS) make -C examples
 
 example-clean:
-	make -C example clean
+	make -C examples clean
 
 check:
 	make -C tests
