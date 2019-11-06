@@ -16,7 +16,7 @@
 #include "assert.h"
 #include "lora_serialization.h"
 
-static void _int_to_bytes(uint8_t *buffer, int value,
+static void _int_to_bytes(uint8_t *buffer, int32_t value,
                                             uint8_t byteSize);
 
 void lora_serialization_reset(lora_serialization_t *serialization)
@@ -154,7 +154,7 @@ int lora_serialization_write_bitmap(lora_serialization_t *serialization,
     return 0;
 }
 
-static void _int_to_bytes(uint8_t *buffer, int value,
+static void _int_to_bytes(uint8_t *buffer, int32_t value,
                                        uint8_t byteSize)
 {
     for (uint8_t i = 0; i < byteSize; i++) {
